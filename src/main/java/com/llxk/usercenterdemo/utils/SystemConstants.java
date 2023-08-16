@@ -19,9 +19,13 @@ public class SystemConstants {
      */
     public static final int MIN_USER_PASSWORD_LENGTH = 8;
     /**
-     * 加盐
+     * 盐值，混淆密码
      */
     public static final String SALT = "LLXK";
+    /**
+     * 用户登录态键
+     */
+    public static final String USER_LOGIN_STATE = "userLoginState";
 
 
 
