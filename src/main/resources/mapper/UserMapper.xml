@@ -23,6 +23,7 @@
         id,username,userAccount,
         avatarUrl,gender,userPassword,
         phone,email,userStatus,
-        createTime,updateTime,idDelete
+        createTime,updateTime,idDelete,
+        userRole
     </sql>
 </mapper>
