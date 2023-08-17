@@ -54,12 +54,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         String validPattern = "[`~!@#$%^&*()+=|{}':;',\\\\[\\\\].<>/?~！@#￥%……&*（）——+|{}【】‘；：”“’。，、？]";
         Matcher matcher = Pattern.compile(validPattern).matcher(userAccount);
         if(matcher.find()){
-            return -1;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "账户不能包含特殊字符");
         }
 
         //密码和校验密码相同
         if(!userPassword.equals(checkPassword)){
-            return -1;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码和校验密码相同");
         }
 
         //账户不能重复
@@ -67,7 +67,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         lambdaQueryWrapper.eq(User::getUserAccount, userAccount);
         int count = userMapper.selectCount(lambdaQueryWrapper);
         if(count > 0){
-            return -1;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "账户重复");
         }
 
         //编号不能重复
@@ -75,7 +75,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         lambdaQueryWrapper.eq(User::getPlanetCode, planetCode);
         count = userMapper.selectCount(lambdaQueryWrapper);
         if(count > 0){
-            return -1;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "编号重复");
         }
 
         //2. 加密
@@ -87,7 +87,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         user.setPlanetCode(planetCode);
         boolean saveResult = this.save(user);
         if(!saveResult){
-            return -1;
+            throw new BusinessException(ErrorCode.SAVE_FAILED, "注册失败");
         }
 
         return user.getId();
@@ -97,20 +97,20 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     public User userLogin(String userAccount, String userPassword, HttpServletRequest request) {
         //1. 校验
         if(StringUtils.isAnyBlank(userAccount, userPassword)){
-            return null;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "有参数为空");
         }
         if(userAccount.length() < MIN_USER_ACCOUNT_LENGTH){
-            return null;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户名过短");
         }
         if(userPassword.length() < MIN_USER_PASSWORD_LENGTH){
-            return null;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户密码长度过短");
         }
 
         //账户不能包含特殊字符
         String validPattern = "[`~!@#$%^&*()+=|{}':;',\\\\[\\\\].<>/?~！@#￥%……&*（）——+|{}【】‘；：”“’。，、？]";
         Matcher matcher = Pattern.compile(validPattern).matcher(userAccount);
         if(matcher.find()){
-            return null;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "账户不能包含特殊字符");
         }
 
         //2. 加密
@@ -124,7 +124,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         //用户不存在
         if(user == null){
             log.info("user login failed, userAccount cannot match userPassword");
-            return null;
+           throw new BusinessException(ErrorCode.NULL_ERROR, "用户不存在");
         }
 
         //3. 用户脱敏
@@ -143,7 +143,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     @Override
     public User getSafetyUser(User originUser){
         if (originUser == null) {
-            return null;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         User safeUser = new User();
         safeUser.setId(originUser.getId());
