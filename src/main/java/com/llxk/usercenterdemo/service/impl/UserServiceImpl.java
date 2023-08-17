@@ -2,6 +2,8 @@ package com.llxk.usercenterdemo.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.llxk.usercenterdemo.common.ErrorCode;
+import com.llxk.usercenterdemo.exception.BusinessException;
 import com.llxk.usercenterdemo.mapper.UserMapper;
 import com.llxk.usercenterdemo.model.domain.User;
 import com.llxk.usercenterdemo.service.UserService;
@@ -33,17 +35,19 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     private UserMapper userMapper;
 
     @Override
-    public long userRegister(String userAccount, String userPassword, String checkPassword) {
+    public long userRegister(String userAccount, String userPassword, String checkPassword, String planetCode) {
         //1. 校验
-        if(StringUtils.isAnyBlank(userAccount, userPassword, checkPassword)){
-            //TODO 修改为自定义异常
-            return -1;
+        if(StringUtils.isAnyBlank(userAccount, userPassword, checkPassword, planetCode)){
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
         }
         if(userAccount.length() < MIN_USER_ACCOUNT_LENGTH){
-            return -1;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户名过短");
         }
         if(userPassword.length() < MIN_USER_PASSWORD_LENGTH || checkPassword.length() < MIN_USER_PASSWORD_LENGTH){
-            return -1;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户密码长度过短");
+        }
+        if(planetCode.length() > 5){
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "编号过长");
         }
 
         //账户不能包含特殊字符
@@ -65,12 +69,22 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         if(count > 0){
             return -1;
         }
+
+        //编号不能重复
+        lambdaQueryWrapper = new LambdaQueryWrapper<>();
+        lambdaQueryWrapper.eq(User::getPlanetCode, planetCode);
+        count = userMapper.selectCount(lambdaQueryWrapper);
+        if(count > 0){
+            return -1;
+        }
+
         //2. 加密
         String encryptPassword = DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
         //3. 插入数据
         User user = new User();
         user.setUserAccount(userAccount);
         user.setUserPassword(encryptPassword);
+        user.setPlanetCode(planetCode);
         boolean saveResult = this.save(user);
         if(!saveResult){
             return -1;
@@ -140,6 +154,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         safeUser.setPhone(originUser.getPhone());
         safeUser.setEmail(originUser.getEmail());
         safeUser.setUserRole(originUser.getUserRole());
+        safeUser.setPlanetCode(originUser.getPlanetCode());
         safeUser.setUserStatus(originUser.getUserStatus());
         safeUser.setCreateTime(originUser.getCreateTime());
         return safeUser;

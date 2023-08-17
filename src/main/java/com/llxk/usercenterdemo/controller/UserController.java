@@ -1,16 +1,19 @@
 package com.llxk.usercenterdemo.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.llxk.usercenterdemo.common.BaseResponse;
+import com.llxk.usercenterdemo.common.ErrorCode;
+import com.llxk.usercenterdemo.exception.BusinessException;
 import com.llxk.usercenterdemo.model.domain.User;
 import com.llxk.usercenterdemo.model.domain.request.UserLoginRequest;
 import com.llxk.usercenterdemo.model.domain.request.UserRegisterRequest;
 import com.llxk.usercenterdemo.service.UserService;
+import com.llxk.usercenterdemo.utils.ResultUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -35,22 +38,25 @@ public class UserController {
 
 
     @PostMapping("/register")
-    public Long userRegister(@RequestBody UserRegisterRequest userRegisterRequest){
+    public BaseResponse<Long> userRegister(@RequestBody UserRegisterRequest userRegisterRequest){
         if(userRegisterRequest == null){
-            return null;
+//            return ResultUtils.error(ErrorCode.PARAMS_ERROR);
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         String userAccount = userRegisterRequest.getUserAccount();
         String userPassword = userRegisterRequest.getUserPassword();
         String checkPassword = userRegisterRequest.getCheckPassword();
-        if(StringUtils.isAnyBlank(userAccount, userPassword, checkPassword)){
+        String planetCode = userRegisterRequest.getPlanetCode();
+        if(StringUtils.isAnyBlank(userAccount, userPassword, checkPassword, planetCode)){
             return null;
         }
-        long id = userService.userRegister(userAccount, userPassword, checkPassword);
-        return id;
+        long result = userService.userRegister(userAccount, userPassword, checkPassword, planetCode);
+        return ResultUtils.success(result);
+
     }
 
     @PostMapping("/login")
-    public User userLogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest request){
+    public BaseResponse<User> userLogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest request){
         if(userLoginRequest == null){
             return null;
         }
@@ -60,20 +66,21 @@ public class UserController {
             return null;
         }
         User user = userService.userLogin(userAccount, userPassword, request);
-        return user;
+        return ResultUtils.success(user);
     }
 
     @PostMapping("/logout")
-    public Integer userLogout(HttpServletRequest request){
+    public BaseResponse<Integer> userLogout(HttpServletRequest request){
         if (request == null) {
             return null;
         }
-        return userService.userLogout(request);
+        int result = userService.userLogout(request);
+        return ResultUtils.success(result);
     }
 
 
     @GetMapping("/current")
-    public User getCurrent(HttpServletRequest request){
+    public BaseResponse<User> getCurrent(HttpServletRequest request){
         Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
         User currentUser = (User) userObj;
         if(currentUser == null){
@@ -82,7 +89,8 @@ public class UserController {
         long userId = currentUser.getId();
         //TODO 校验用户是否合法
         User user = userService.getById(userId);
-        return userService.getSafetyUser(user);
+        User safetyUser = userService.getSafetyUser(user);
+        return ResultUtils.success(safetyUser);
     }
 
 
@@ -93,30 +101,32 @@ public class UserController {
      * @return 查询到的用户
      */
     @GetMapping("/search")
-    public List<User> searchUsers(String username, HttpServletRequest request){
+    public BaseResponse<List<User>> searchUsers(String username, HttpServletRequest request){
         //仅管理员可查询
         if(!isAdmin(request)){
-            return new ArrayList<>();
+            throw new BusinessException(ErrorCode.NO_AUTH, "无管理员权限");
         }
         LambdaQueryWrapper<User> lambdaQueryWrapper = new LambdaQueryWrapper<>();
         if(StringUtils.isNotBlank(username)){
             lambdaQueryWrapper.like(User::getUsername, username);
         }
         List<User> userList = userService.list(lambdaQueryWrapper);
-        return userList.stream().map(user -> userService.getSafetyUser(user)).collect(Collectors.toList());
+        userList = userList.stream().map(user -> userService.getSafetyUser(user)).collect(Collectors.toList());
+        return ResultUtils.success(userList);
 
     }
 
     @PostMapping("/delete")
-    public boolean deleteUser(@RequestBody long id, HttpServletRequest request){
+    public BaseResponse<Boolean> deleteUser(@RequestBody long id, HttpServletRequest request){
         //仅管理员可删除
         if(!isAdmin(request)){
-            return false;
+            return null;
         }
         if(id <= 0){
-            return false;
+            return null;
         }
-        return userService.removeById(id);
+        boolean result = userService.removeById(id);
+        return ResultUtils.success(result);
     }
 
     /**
