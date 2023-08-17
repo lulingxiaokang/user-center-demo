@@ -63,6 +63,30 @@ public class UserController {
         return user;
     }
 
+    @PostMapping("/logout")
+    public Integer userLogout(HttpServletRequest request){
+        if (request == null) {
+            return null;
+        }
+        return userService.userLogout(request);
+    }
+
+
+    @GetMapping("/current")
+    public User getCurrent(HttpServletRequest request){
+        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+        User currentUser = (User) userObj;
+        if(currentUser == null){
+            return null;
+        }
+        long userId = currentUser.getId();
+        //TODO 校验用户是否合法
+        User user = userService.getById(userId);
+        return userService.getSafetyUser(user);
+    }
+
+
+
     /**
      * 查询用户
      * @param username 查询条件

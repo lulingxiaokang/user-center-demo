@@ -128,6 +128,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      */
     @Override
     public User getSafetyUser(User originUser){
+        if (originUser == null) {
+            return null;
+        }
         User safeUser = new User();
         safeUser.setId(originUser.getId());
         safeUser.setUsername(originUser.getUsername());
@@ -140,6 +143,19 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         safeUser.setUserStatus(originUser.getUserStatus());
         safeUser.setCreateTime(originUser.getCreateTime());
         return safeUser;
+    }
+
+    /**
+     * 用户注销
+     *
+     * @param request
+     * @return 注销结果
+     */
+    @Override
+    public int userLogout(HttpServletRequest request) {
+        //移除用户登陆态
+        request.getSession().removeAttribute(USER_LOGIN_STATE);
+        return 1;
     }
 }
 
